@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs::read_dir;
 
-use crate::migration::migration_extract::extract_migration;
+use crate::migration::extractor::extract_migration;
 use crate::migration::FileError::*;
 use crate::migration::MigrationParsingError::*;
 use crate::migration::{FileError, Migration, MigrationParsingError, MigrationResult};
@@ -40,7 +40,7 @@ impl MigrationStack {
     }
 }
 
-pub fn parse_migrations(directory_path: &str) -> Result<MigrationResult, FileError> {
+pub fn validate_migrations(directory_path: &str) -> Result<MigrationResult, FileError> {
     let entries = read_dir(directory_path).map_err(|_err| DirectoryNotLoadedError)?;
     let mut migration_stack = MigrationStack::new();
 

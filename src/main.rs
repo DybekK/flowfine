@@ -1,5 +1,5 @@
 use crate::config::SmtConfig;
-use crate::migration::migration_parser::parse_migrations;
+use crate::migration::validator::validate_migrations;
 
 mod config;
 mod migration;
@@ -18,5 +18,5 @@ async fn main() {
 }
 
 fn migrate(config: &SmtConfig) {
-    parse_migrations(&config.directory);
+    validate_migrations(&config.directory);
 }

@@ -1,7 +1,8 @@
 use std::collections::BTreeMap;
 use thiserror::Error;
-mod migration_extract;
-pub mod migration_parser;
+
+mod extractor;
+pub mod validator;
 
 #[derive(Debug, Error)]
 pub enum FileError {

@@ -26,7 +26,7 @@ fn get_migration_filename(path: &DirEntry) -> String {
 }
 
 fn get_migration_version(filename: &str) -> Result<String, MigrationParsingError> {
-    let start = 0;
+    let start = 1;
     let end = filename.find("__").ok_or(InvalidMigrationFormatError)?;
     let version = &filename[start..end];
 
