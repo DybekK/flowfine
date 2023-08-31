@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 use thiserror::Error;
 
@@ -25,14 +26,28 @@ pub enum MigrationParsingError {
     MissingMigrationContentError,
 }
 
+#[derive(Clone, PartialOrd, PartialEq, Eq)]
+pub struct NumericVersion(String);
+
+impl Ord for NumericVersion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+#[derive(Clone, PartialOrd, PartialEq, Eq, Ord)]
+pub enum MigrationVersion {
+    Numeric(NumericVersion),
+}
+
 pub struct Migration {
     pub filename: String,
-    pub version: String,
+    pub version: MigrationVersion,
     pub name: String,
     pub content: String,
 }
 
 pub struct MigrationResult {
     errors: Vec<MigrationParsingError>,
-    migrations: BTreeMap<String, Migration>,
+    migrations: BTreeMap<MigrationVersion, Migration>,
 }

@@ -1,7 +1,8 @@
 use std::fs::{read_to_string, DirEntry};
 
 use crate::migration::MigrationParsingError::*;
-use crate::migration::{Migration, MigrationParsingError};
+use crate::migration::MigrationVersion::Numeric;
+use crate::migration::{Migration, MigrationParsingError, MigrationVersion, NumericVersion};
 
 pub fn extract_migration(path: &DirEntry) -> Result<Migration, MigrationParsingError> {
     let filename = get_migration_filename(path);
@@ -25,12 +26,12 @@ fn get_migration_filename(path: &DirEntry) -> String {
     }
 }
 
-fn get_migration_version(filename: &str) -> Result<String, MigrationParsingError> {
+fn get_migration_version(filename: &str) -> Result<MigrationVersion, MigrationParsingError> {
     let start = 1;
     let end = filename.find("__").ok_or(InvalidMigrationFormatError)?;
     let version = &filename[start..end];
 
-    Ok(version.to_string())
+    Ok(Numeric(NumericVersion(version.to_string())))
 }
 
 fn get_migration_name(filename: &str) -> Result<String, MigrationParsingError> {

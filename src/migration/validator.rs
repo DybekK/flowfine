@@ -4,10 +4,12 @@ use std::fs::read_dir;
 use crate::migration::extractor::extract_migration;
 use crate::migration::FileError::*;
 use crate::migration::MigrationParsingError::*;
-use crate::migration::{FileError, Migration, MigrationParsingError, MigrationResult};
+use crate::migration::{
+    FileError, Migration, MigrationParsingError, MigrationResult, MigrationVersion,
+};
 
 struct MigrationStack {
-    migrations: BTreeMap<String, Migration>,
+    migrations: BTreeMap<MigrationVersion, Migration>,
     errors: Vec<MigrationParsingError>,
 }
 
