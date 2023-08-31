@@ -1,3 +1,4 @@
+use crate::config::VersionFormatting;
 use std::collections::BTreeMap;
 use std::fs::read_dir;
 
@@ -42,14 +43,17 @@ impl MigrationStack {
     }
 }
 
-pub fn validate_migrations(directory_path: &str) -> Result<MigrationResult, FileError> {
+pub fn validate_migrations(
+    directory_path: &str,
+    version_formatting: &VersionFormatting,
+) -> Result<MigrationResult, FileError> {
     let entries = read_dir(directory_path).map_err(|_err| DirectoryNotLoadedError)?;
     let mut migration_stack = MigrationStack::new();
 
     for entry in entries {
         let entry = entry.map_err(|_err| FileNotLoadedError)?;
 
-        match extract_migration(&entry) {
+        match extract_migration(&entry, version_formatting) {
             Ok(migration) => migration_stack.push_migration(migration),
             Err(err) => migration_stack.push_error(err),
         }

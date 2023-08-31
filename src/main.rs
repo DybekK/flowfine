@@ -1,4 +1,5 @@
 use crate::config::SmtConfig;
+use crate::config::VersionFormatting::Numeric;
 use crate::migration::validator::validate_migrations;
 
 mod config;
@@ -10,6 +11,7 @@ async fn main() {
         username: "".to_string(),
         password: "".to_string(),
         directory: "./migrations".to_string(),
+        version_formatting: Numeric,
         keyspace: "smt".to_string(),
         host: "localhost".to_string(),
         port: 9042,
@@ -18,5 +20,5 @@ async fn main() {
 }
 
 fn migrate(config: &SmtConfig) {
-    validate_migrations(&config.directory);
+    validate_migrations(&config.directory, &config.version_formatting);
 }

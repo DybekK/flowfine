@@ -1,12 +1,16 @@
+use crate::config::VersionFormatting;
 use std::fs::{read_to_string, DirEntry};
 
 use crate::migration::MigrationParsingError::*;
-use crate::migration::MigrationVersion::Numeric;
-use crate::migration::{Migration, MigrationParsingError, MigrationVersion, NumericVersion};
 
-pub fn extract_migration(path: &DirEntry) -> Result<Migration, MigrationParsingError> {
+use crate::migration::{Migration, MigrationParsingError, MigrationVersion};
+
+pub fn extract_migration(
+    path: &DirEntry,
+    version_formatting: &VersionFormatting,
+) -> Result<Migration, MigrationParsingError> {
     let filename = get_migration_filename(path);
-    let version = get_migration_version(&filename)?;
+    let version = get_migration_version(&filename, version_formatting)?;
     let name = get_migration_name(&filename)?;
     let content = get_migration_content(path)?;
     let migration = Migration {
@@ -26,12 +30,15 @@ fn get_migration_filename(path: &DirEntry) -> String {
     }
 }
 
-fn get_migration_version(filename: &str) -> Result<MigrationVersion, MigrationParsingError> {
+fn get_migration_version(
+    filename: &str,
+    version_formatting: &VersionFormatting,
+) -> Result<MigrationVersion, MigrationParsingError> {
     let start = 1;
     let end = filename.find("__").ok_or(InvalidMigrationFormatError)?;
     let version = &filename[start..end];
 
-    Ok(Numeric(NumericVersion(version.to_string())))
+    MigrationVersion::new(version_formatting, version)
 }
 
 fn get_migration_name(filename: &str) -> Result<String, MigrationParsingError> {
