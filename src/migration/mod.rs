@@ -1,11 +1,10 @@
-use crate::config::VersionFormatting;
-use crate::migration::MigrationVersion::Numeric;
-use regex::Regex;
-use std::cmp::Ordering;
+use crate::migration::version::MigrationVersion;
 use std::collections::BTreeMap;
 use thiserror::Error;
 
 mod extractor;
+mod version;
+
 pub mod validator;
 
 #[derive(Debug, Error)]
@@ -19,56 +18,20 @@ pub enum FileError {
 
 #[derive(Debug, Error)]
 pub enum MigrationParsingError {
-    #[error("Duplicated migration version in file: {migration_name}")]
-    DuplicatedMigrationError { migration_name: String },
+    #[error("Duplicated migration version for file: {name}")]
+    DuplicatedMigrationError { name: String },
 
-    #[error("Invalid migration format")]
-    InvalidMigrationFormatError,
+    #[error("Invalid migration format for file: {name}")]
+    InvalidMigrationFormatError { name: String },
 
-    #[error("Invalid version format")]
-    InvalidVersionFormatError,
+    #[error("Invalid version format for file {name}")]
+    InvalidVersionFormatError { name: String },
 
-    #[error("Missing migration content")]
-    MissingMigrationContentError,
+    #[error("Missing migration content for file {name}")]
+    MissingMigrationContentError { name: String },
 }
 
-#[derive(Clone, PartialOrd, PartialEq, Eq, Ord)]
-pub enum MigrationVersion {
-    Numeric(NumericVersion),
-}
-
-impl MigrationVersion {
-    pub fn new(
-        version_formatting: &VersionFormatting,
-        version: &str,
-    ) -> Result<Self, MigrationParsingError> {
-        match version_formatting {
-            VersionFormatting::Numeric => NumericVersion::new(version),
-            VersionFormatting::Datetime => unimplemented!(),
-        }
-    }
-}
-
-#[derive(Clone, PartialOrd, PartialEq, Eq)]
-pub struct NumericVersion(String);
-
-impl NumericVersion {
-    fn new(version: &str) -> Result<MigrationVersion, MigrationParsingError> {
-        let version_regex = Regex::new(r"^\d+\.\d+$").unwrap();
-        if version_regex.is_match(version) {
-            Ok(Numeric(NumericVersion(version.to_string())))
-        } else {
-            Err(MigrationParsingError::InvalidVersionFormatError)
-        }
-    }
-}
-
-impl Ord for NumericVersion {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.0.cmp(&other.0)
-    }
-}
-
+#[derive(Clone, Debug)]
 pub struct Migration {
     pub filename: String,
     pub version: MigrationVersion,
@@ -79,4 +42,20 @@ pub struct Migration {
 pub struct MigrationResult {
     errors: Vec<MigrationParsingError>,
     migrations: BTreeMap<MigrationVersion, Migration>,
+}
+
+impl MigrationResult {
+    pub fn print_report(self) {
+        if !self.errors.is_empty() {
+            println!("Migration Errors:");
+            for error in &self.errors {
+                println!("{:?}", error.to_string());
+            }
+        } else {
+            println!("Migration Report:");
+            for (_, migration) in &self.migrations {
+                println!("Migration: {:?}", migration);
+            }
+        }
+    }
 }

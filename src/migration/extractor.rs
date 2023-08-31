@@ -35,10 +35,12 @@ fn get_migration_version(
     version_formatting: &VersionFormatting,
 ) -> Result<MigrationVersion, MigrationParsingError> {
     let start = 1;
-    let end = filename.find("__").ok_or(InvalidMigrationFormatError)?;
+    let end = filename.find("__").ok_or(InvalidMigrationFormatError {
+        name: filename.to_string(),
+    })?;
     let version = &filename[start..end];
 
-    MigrationVersion::new(version_formatting, version)
+    MigrationVersion::new(version_formatting, filename, version)
 }
 
 fn get_migration_name(filename: &str) -> Result<String, MigrationParsingError> {
@@ -46,7 +48,9 @@ fn get_migration_name(filename: &str) -> Result<String, MigrationParsingError> {
         .find("__")
         .and_then(|start| filename.rfind(".cql").map(|end| (start, end)))
         .map(|(start, end)| &filename[start + 2..end])
-        .ok_or(InvalidMigrationFormatError)?;
+        .ok_or(InvalidMigrationFormatError {
+            name: filename.to_string(),
+        })?;
 
     Ok(migration_name.replace("_", " "))
 }
@@ -54,7 +58,11 @@ fn get_migration_name(filename: &str) -> Result<String, MigrationParsingError> {
 fn get_migration_content(path: &DirEntry) -> Result<String, MigrationParsingError> {
     match read_to_string(path.path()) {
         Ok(content) if !content.trim().is_empty() => Ok(content),
-        Ok(_) => Err(MissingMigrationContentError),
-        Err(_) => Err(MissingMigrationContentError),
+        Ok(_) => Err(MissingMigrationContentError {
+            name: get_migration_filename(path),
+        }),
+        Err(_) => Err(MissingMigrationContentError {
+            name: get_migration_filename(path),
+        }),
     }
 }

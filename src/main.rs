@@ -20,5 +20,8 @@ async fn main() {
 }
 
 fn migrate(config: &SmtConfig) {
-    validate_migrations(&config.directory, &config.version_formatting);
+    match validate_migrations(&config.directory, &config.version_formatting) {
+        Ok(migration_result) => migration_result.print_report(),
+        Err(err) => println!("Error: {:?}", err),
+    }
 }

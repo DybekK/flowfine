@@ -24,11 +24,11 @@ impl MigrationStack {
 
     fn push_migration(&mut self, migration: Migration) {
         let version = migration.version.clone();
-        let migration_name = migration.filename.clone();
+        let filename = migration.filename.clone();
 
         self.migrations
             .insert(version, migration)
-            .map(|_| self.push_error(DuplicatedMigrationError { migration_name }));
+            .map(|_| self.push_error(DuplicatedMigrationError { name: filename }));
     }
 
     fn push_error(&mut self, error: MigrationParsingError) {

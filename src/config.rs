@@ -12,9 +12,3 @@ pub enum VersionFormatting {
     Numeric,
     Datetime,
 }
-
-impl SmtConfig {
-    pub fn url(&self) -> String {
-        format!("{}:{}", self.host, self.port)
-    }
-}
