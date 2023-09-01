@@ -28,7 +28,7 @@ impl MigrationStack {
 
         self.migrations
             .insert(version, migration)
-            .map(|_| self.push_error(DuplicatedMigrationError { name: filename }));
+            .map(|_| self.push_error(DuplicatedMigrationError(filename)));
     }
 
     fn push_error(&mut self, error: MigrationParsingError) {

@@ -1,5 +1,6 @@
 use crate::config::VersionFormatting;
 use crate::migration::MigrationParsingError;
+use crate::migration::MigrationParsingError::*;
 use chrono::NaiveDateTime;
 use regex::Regex;
 
@@ -22,14 +23,10 @@ impl MigrationVersion {
     }
 }
 
-trait MigrationVersionValidator {
-    fn new(filename: &str, version: &str) -> Result<MigrationVersion, MigrationParsingError>;
-}
-
 #[derive(Clone, Debug, PartialOrd, PartialEq, Eq, Ord)]
 pub struct NumericVersion(String);
 
-impl MigrationVersionValidator for NumericVersion {
+impl NumericVersion {
     fn new(filename: &str, version: &str) -> Result<MigrationVersion, MigrationParsingError> {
         let version_regex = Regex::new(r"^(\d{1,10}(\.\d+)?|\d+\.\d+)$").unwrap();
 
@@ -38,22 +35,18 @@ impl MigrationVersionValidator for NumericVersion {
                 version.to_string(),
             )))
         } else {
-            Err(MigrationParsingError::InvalidVersionFormatError {
-                name: filename.to_string(),
-            })
+            Err(InvalidVersionFormatError(filename.to_string()))
         }
     }
 }
 #[derive(Clone, Debug, PartialOrd, PartialEq, Eq, Ord)]
 pub struct DatetimeVersion(NaiveDateTime);
 
-impl MigrationVersionValidator for DatetimeVersion {
+impl DatetimeVersion {
     fn new(filename: &str, version: &str) -> Result<MigrationVersion, MigrationParsingError> {
         match NaiveDateTime::parse_from_str(version, "%Y%m%d%H%M%S") {
             Ok(datetime) => Ok(MigrationVersion::Datetime(DatetimeVersion(datetime))),
-            Err(_) => Err(MigrationParsingError::InvalidVersionFormatError {
-                name: filename.to_string(),
-            }),
+            Err(_) => Err(InvalidVersionFormatError(filename.to_string())),
         }
     }
 }

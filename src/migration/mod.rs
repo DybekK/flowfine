@@ -18,17 +18,17 @@ pub enum FileError {
 
 #[derive(Debug, Error)]
 pub enum MigrationParsingError {
-    #[error("Duplicated migration version for file: {name}")]
-    DuplicatedMigrationError { name: String },
+    #[error("Duplicated migration version for file: {0}")]
+    DuplicatedMigrationError(String),
 
-    #[error("Invalid migration format for file: {name}")]
-    InvalidMigrationFormatError { name: String },
+    #[error("Invalid migration format for file: {0}")]
+    InvalidMigrationFormatError(String),
 
-    #[error("Invalid version format for file {name}")]
-    InvalidVersionFormatError { name: String },
+    #[error("Invalid version format for file {0}")]
+    InvalidVersionFormatError(String),
 
-    #[error("Missing migration content for file {name}")]
-    MissingMigrationContentError { name: String },
+    #[error("Missing migration content for file {0}")]
+    MissingMigrationContentError(String),
 }
 
 #[derive(Clone, Debug)]
