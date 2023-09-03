@@ -11,3 +11,6 @@ regex = "1.9.4"
 chrono = "0.4.27"
 thiserror = "1.0"
 tokio = { version = "1.12", features = ["full"] }
+
+#tests
+rstest = "0.18.2"
