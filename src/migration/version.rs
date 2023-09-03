@@ -1,52 +1,41 @@
 use crate::config::VersionFormatting;
-use crate::migration::MigrationParsingError;
-use crate::migration::MigrationParsingError::*;
+
 use chrono::NaiveDateTime;
+use lazy_static::lazy_static;
 use regex::Regex;
 
-#[derive(Clone, Debug, PartialOrd, PartialEq, Eq, Ord)]
-pub enum MigrationVersion {
-    Numeric(NumericVersion),
-    Datetime(DatetimeVersion),
+lazy_static! {
+    static ref NUMERIC_VERSION_REGEX: Regex =
+        Regex::new(r"^(\d{1,10}(\.\d+)*|\d+(\.\d+)+)$").unwrap();
+    static ref DATETIME_VERSION_FORMAT: String = "%Y%m%d%H%M%S".to_string();
 }
 
-impl MigrationVersion {
-    pub fn new(
-        version_formatting: &VersionFormatting,
-        filename: &str,
-        version: &str,
-    ) -> Result<Self, MigrationParsingError> {
+#[derive(Clone, Debug, PartialOrd, PartialEq, Eq, Ord)]
+pub enum MigrationVersionKey {
+    Numeric(String),
+    Datetime(NaiveDateTime),
+}
+
+impl MigrationVersionKey {
+    pub fn new(version_formatting: &VersionFormatting, version: &str) -> Option<Self> {
         match version_formatting {
-            VersionFormatting::Numeric => NumericVersion::new(filename, version),
-            VersionFormatting::Datetime => DatetimeVersion::new(filename, version),
+            VersionFormatting::Numeric => parse_numeric_version(version),
+            VersionFormatting::Datetime => parse_datetime_version(version),
         }
     }
 }
 
-#[derive(Clone, Debug, PartialOrd, PartialEq, Eq, Ord)]
-pub struct NumericVersion(String);
-
-impl NumericVersion {
-    fn new(filename: &str, version: &str) -> Result<MigrationVersion, MigrationParsingError> {
-        let version_regex = Regex::new(r"^(\d{1,10}(\.\d+)?|\d+\.\d+)$").unwrap();
-
-        if version_regex.is_match(version) {
-            Ok(MigrationVersion::Numeric(NumericVersion(
-                version.to_string(),
-            )))
-        } else {
-            Err(InvalidVersionFormatError(filename.to_string()))
-        }
+fn parse_numeric_version(version: &str) -> Option<MigrationVersionKey> {
+    if NUMERIC_VERSION_REGEX.is_match(version) {
+        Some(MigrationVersionKey::Numeric(version.to_string()))
+    } else {
+        None
     }
 }
-#[derive(Clone, Debug, PartialOrd, PartialEq, Eq, Ord)]
-pub struct DatetimeVersion(NaiveDateTime);
 
-impl DatetimeVersion {
-    fn new(filename: &str, version: &str) -> Result<MigrationVersion, MigrationParsingError> {
-        match NaiveDateTime::parse_from_str(version, "%Y%m%d%H%M%S") {
-            Ok(datetime) => Ok(MigrationVersion::Datetime(DatetimeVersion(datetime))),
-            Err(_) => Err(InvalidVersionFormatError(filename.to_string())),
-        }
+fn parse_datetime_version(version: &str) -> Option<MigrationVersionKey> {
+    match NaiveDateTime::parse_from_str(version, &DATETIME_VERSION_FORMAT) {
+        Ok(datetime) => Some(MigrationVersionKey::Datetime(datetime)),
+        Err(_) => None,
     }
 }

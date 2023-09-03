@@ -1,11 +1,11 @@
-use crate::migration::version::MigrationVersion;
+use crate::migration::version::MigrationVersionKey;
 use std::collections::BTreeMap;
+
+use crate::migration::MigrationParsingError::DuplicatedMigrationError;
 use thiserror::Error;
 
-mod extractor;
+pub mod parser;
 mod version;
-
-pub mod validator;
 
 #[derive(Debug, Error)]
 pub enum FileError {
@@ -34,14 +34,14 @@ pub enum MigrationParsingError {
 #[derive(Clone, Debug)]
 pub struct Migration {
     pub filename: String,
-    pub version: MigrationVersion,
+    pub version: String,
     pub name: String,
     pub content: String,
 }
 
 pub struct MigrationResult {
     errors: Vec<MigrationParsingError>,
-    migrations: BTreeMap<MigrationVersion, Migration>,
+    migrations: Vec<Migration>,
 }
 
 impl MigrationResult {
@@ -53,9 +53,42 @@ impl MigrationResult {
             }
         } else {
             println!("Migration Report:");
-            for (_, migration) in &self.migrations {
+            for migration in &self.migrations {
                 println!("Migration: {:?}", migration);
             }
+        }
+    }
+}
+
+pub struct MigrationStack {
+    migrations: BTreeMap<MigrationVersionKey, Migration>,
+    errors: Vec<MigrationParsingError>,
+}
+
+impl MigrationStack {
+    fn new() -> Self {
+        MigrationStack {
+            migrations: BTreeMap::new(),
+            errors: Vec::new(),
+        }
+    }
+
+    fn push_migration(&mut self, version_key: MigrationVersionKey, migration: Migration) {
+        let filename = migration.filename.clone();
+
+        self.migrations
+            .insert(version_key, migration)
+            .map(|_| self.push_error(DuplicatedMigrationError(filename)));
+    }
+
+    fn push_error(&mut self, error: MigrationParsingError) {
+        self.errors.push(error);
+    }
+
+    fn into_result(self) -> MigrationResult {
+        MigrationResult {
+            errors: self.errors,
+            migrations: self.migrations.into_values().collect(),
         }
     }
 }
