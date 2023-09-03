@@ -1,10 +1,9 @@
 use crate::config::VersionFormatting;
 use std::fs::{read_dir, read_to_string, DirEntry};
 
-use crate::migration::MigrationParsingError::*;
-
-use crate::migration::FileError::*;
-use crate::migration::*;
+use crate::scanner::FileError::*;
+use crate::scanner::MigrationParsingError::*;
+use crate::scanner::*;
 
 pub fn parse_migrations(
     directory_path: &str,

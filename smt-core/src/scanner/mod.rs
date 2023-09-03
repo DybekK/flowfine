@@ -1,7 +1,7 @@
-use crate::migration::version::MigrationVersionKey;
 use std::collections::BTreeMap;
 
-use crate::migration::MigrationParsingError::DuplicatedMigrationError;
+use crate::scanner::version::MigrationVersionKey;
+use crate::scanner::MigrationParsingError::DuplicatedMigrationError;
 use thiserror::Error;
 
 pub mod parser;
