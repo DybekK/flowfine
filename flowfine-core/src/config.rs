@@ -1,4 +1,4 @@
-pub struct SmtConfig {
+pub struct MigrationConfig {
     pub username: String,
     pub password: String,
     pub directory: String,
