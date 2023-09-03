@@ -16,7 +16,7 @@ pub enum FileError {
     FileNotLoadedError,
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, PartialEq, Eq, Hash, Error)]
 pub enum MigrationParsingError {
     #[error("Duplicated migration version for file: {0}")]
     DuplicatedMigrationError(String),

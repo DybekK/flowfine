@@ -65,9 +65,15 @@ fn parse_migration_version(
 }
 
 fn parse_migration_name(filename: &str) -> Result<String, MigrationParsingError> {
+    let extension = ".cql";
+
+    if !filename.ends_with(extension) {
+        return Err(InvalidMigrationFormatError(filename.to_string()));
+    }
+
     let migration_name = filename
         .find("__")
-        .and_then(|start| filename.rfind(".cql").map(|end| (start, end)))
+        .and_then(|start| filename.rfind(extension).map(|end| (start, end)))
         .map(|(start, end)| &filename[start + 2..end])
         .ok_or(InvalidMigrationFormatError(filename.to_string()))?;
 
@@ -79,5 +85,79 @@ fn parse_migration_content(path: &DirEntry) -> Result<String, MigrationParsingEr
         Ok(content) if !content.trim().is_empty() => Ok(content),
         Ok(_) => Err(MissingMigrationContentError(parse_migration_filename(path))),
         Err(_) => Err(MissingMigrationContentError(parse_migration_filename(path))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use itertools::Itertools;
+    use rstest::rstest;
+    use std::collections::HashSet;
+
+    #[rstest(version_formatting, path, expected_result,
+        case(VersionFormatting::Numeric, "./tests/data/scanner/numeric_migrations", vec![
+            "V1__migration.cql",
+            "V1.1__migration.cql",
+            "V2.0__migration.cql", 
+        ]),
+        case(VersionFormatting::Datetime, "./tests/data/scanner/datetime_migrations", vec![
+            "V20230903141500__migration.cql",
+            "V20230903141501__migration.cql",
+            "V20230903141502__migration.cql",
+        ])
+    )]
+    fn test_valid_migrations(
+        version_formatting: VersionFormatting,
+        path: &str,
+        expected_result: Vec<&str>,
+    ) {
+        // when
+        let result = parse_migrations(path, &version_formatting);
+
+        // then
+        assert!(result.is_ok());
+        assert_migrations(expected_result, result.unwrap().migrations);
+    }
+
+    #[test]
+    fn test_invalid_migrations() {
+        // given
+        let version_formatting = VersionFormatting::Numeric;
+        let path = "./tests/data/scanner/invalid_migrations";
+
+        // when
+        let result = parse_migrations(path, &version_formatting);
+
+        // then
+        assert!(result.is_ok());
+        let expected = vec![
+            InvalidVersionFormatError("V__invalid_migration_version.cql".to_string()),
+            InvalidMigrationFormatError("V1_invalid_migration_underscore.cql".to_string()),
+            MissingMigrationContentError("V1__invalid_migration_missing_content.cql".to_string()),
+            InvalidMigrationFormatError("V1__invalid_migration_missing_extension.".to_string()),
+        ];
+
+        assert_errors_any_order(expected, result.unwrap().errors);
+    }
+
+    fn assert_migrations(expected: Vec<&str>, actual: Vec<Migration>) {
+        let actual_filenames = actual
+            .into_iter()
+            .into_iter()
+            .map(|migration| migration.filename)
+            .collect_vec();
+
+        assert_eq!(expected, actual_filenames);
+    }
+
+    fn assert_errors_any_order(
+        expected: Vec<MigrationParsingError>,
+        actual: Vec<MigrationParsingError>,
+    ) {
+        assert_eq!(
+            expected.into_iter().collect::<HashSet<_>>(),
+            actual.into_iter().collect::<HashSet<_>>(),
+        );
     }
 }
