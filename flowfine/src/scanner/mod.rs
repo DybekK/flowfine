@@ -47,6 +47,14 @@ pub struct MigrationResult {
 }
 
 impl MigrationResult {
+    pub fn ok(self) -> Option<Vec<Migration>> {
+        if self.errors.is_empty() {
+            Some(self.migrations)
+        } else {
+            None
+        }
+    }
+
     pub fn print_report(self) {
         if !self.errors.is_empty() {
             println!("Migration Errors:");
