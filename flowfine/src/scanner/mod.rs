@@ -5,6 +5,7 @@ use crate::scanner::MigrationParsingError::DuplicatedMigrationError;
 use thiserror::Error;
 
 pub mod parser;
+mod query;
 mod version;
 
 #[derive(Debug, Error)]
@@ -37,6 +38,7 @@ pub struct Migration {
     pub version: String,
     pub name: String,
     pub content: String,
+    pub queries: Vec<String>,
 }
 
 pub struct MigrationResult {
