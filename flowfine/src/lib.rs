@@ -1,2 +1,2 @@
 pub mod config;
-mod scanner;
+pub mod scanner;

@@ -1,6 +1,7 @@
 use crate::config::VersionFormatting;
 use std::fs::{read_dir, read_to_string, DirEntry};
 
+use crate::scanner::query::delimit_queries;
 use crate::scanner::FileError::*;
 use crate::scanner::MigrationParsingError::*;
 use crate::scanner::*;
@@ -32,11 +33,14 @@ fn parse_migration(
     let (version, version_key) = parse_migration_version(&filename, version_formatting)?;
     let name = parse_migration_name(&filename)?;
     let content = parse_migration_content(path)?;
+    let queries = delimit_queries(&content);
+
     let migration = Migration {
         filename,
         version,
         name,
         content,
+        queries,
     };
 
     Ok((version_key, migration))
@@ -88,6 +92,7 @@ fn parse_migration_content(path: &DirEntry) -> Result<String, MigrationParsingEr
     }
 }
 
+// todo: write tests for checking migration's queries
 #[cfg(test)]
 mod tests {
     use super::*;
