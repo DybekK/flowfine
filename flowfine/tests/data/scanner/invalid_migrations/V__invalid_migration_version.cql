@@ -1,1 +1,1 @@
-valid content
+SELECT * FROM FOO;

@@ -141,6 +141,7 @@ mod tests {
             InvalidMigrationFormatError("V1_invalid_migration_underscore.cql".to_string()),
             MissingMigrationContentError("V1__invalid_migration_missing_content.cql".to_string()),
             InvalidMigrationFormatError("V1__invalid_migration_missing_extension.".to_string()),
+            NoSemicolonsFoundError("V1__invalid_migration_missing_semicolon.cql".to_string()),
         ];
 
         assert_errors_any_order(expected, result.unwrap().errors);
