@@ -33,7 +33,7 @@ fn parse_migration(
     let (version, version_key) = parse_migration_version(&filename, version_formatting)?;
     let name = parse_migration_name(&filename)?;
     let content = parse_migration_content(path)?;
-    let queries = delimit_queries(&content);
+    let queries = delimit_queries(&filename, &content)?;
 
     let migration = Migration {
         filename,

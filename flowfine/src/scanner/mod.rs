@@ -30,6 +30,9 @@ pub enum MigrationParsingError {
 
     #[error("Missing migration content for file {0}")]
     MissingMigrationContentError(String),
+    
+    #[error("Missing semicolons in migration content for file {0}")]
+    NoSemicolonsFoundError(String),
 }
 
 #[derive(Clone, Debug)]
