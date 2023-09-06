@@ -47,25 +47,11 @@ pub struct MigrationResult {
 }
 
 impl MigrationResult {
-    pub fn ok(self) -> Option<Vec<Migration>> {
+    pub fn into_result(self) -> Result<Vec<Migration>, Vec<MigrationParsingError>> {
         if self.errors.is_empty() {
-            Some(self.migrations)
+            Ok(self.migrations)
         } else {
-            None
-        }
-    }
-
-    pub fn print_report(self) {
-        if !self.errors.is_empty() {
-            println!("Migration Errors:");
-            for error in &self.errors {
-                println!("{:?}", error.to_string());
-            }
-        } else {
-            println!("Migration Report:");
-            for migration in &self.migrations {
-                println!("Migration: {:?}", migration);
-            }
+            Err(self.errors)
         }
     }
 }
