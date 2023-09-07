@@ -1,11 +1,10 @@
+use crate::migration::version::MigrationVersionKey;
+use crate::migration::MigrationParsingError::*;
 use std::collections::BTreeMap;
-
-use crate::scanner::version::MigrationVersionKey;
-use crate::scanner::MigrationParsingError::DuplicatedMigrationError;
 use thiserror::Error;
 
+pub mod lexer;
 pub mod parser;
-mod query;
 pub mod version;
 
 #[derive(Debug, Error)]
@@ -19,19 +18,19 @@ pub enum FileError {
 
 #[derive(Debug, PartialEq, Eq, Hash, Error)]
 pub enum MigrationParsingError {
-    #[error("Duplicated migration version for file: {0}")]
+    #[error("Duplicated migration.rs version for file: {0}")]
     DuplicatedMigrationError(String),
 
-    #[error("Invalid migration format for file: {0}")]
+    #[error("Invalid migration.rs format for file: {0}")]
     InvalidMigrationFormatError(String),
 
     #[error("Invalid version format for file {0}")]
     InvalidVersionFormatError(String),
 
-    #[error("Missing migration content for file {0}")]
+    #[error("Missing migration.rs content for file {0}")]
     MissingMigrationContentError(String),
 
-    #[error("Missing semicolons in migration content for file {0}")]
+    #[error("Missing semicolons in migration.rs content for file {0}")]
     NoSemicolonsFoundError(String),
 }
 

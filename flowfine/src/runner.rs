@@ -1,5 +1,5 @@
+use crate::migration::Migration;
 use crate::runner::MigrationExecutionError::*;
-use crate::scanner::Migration;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
@@ -7,6 +7,7 @@ use scylla::frame::value::Timestamp;
 use scylla::transport::errors::QueryError;
 use scylla::{FromRow, QueryResult, Session};
 use sha2::{Digest, Sha256};
+use std::sync::Arc;
 use thiserror::Error;
 
 lazy_static! {
@@ -29,26 +30,29 @@ pub enum MigrationExecutionError {
 }
 
 #[derive(FromRow)]
-struct AppliedMigration {
-    version: String,
-    name: String,
-    checksum: String,
-    applied_at: Duration,
-    success: bool,
+pub struct AppliedMigration {
+    pub version: String,
+    pub name: String,
+    pub checksum: String,
+    pub applied_at: Duration,
+    pub success: bool,
 }
 
 #[async_trait]
 pub trait MigrationRunner {
-    async fn run(&self, migrations: Vec<Migration>) -> Result<(), MigrationExecutionError>;
+    async fn run(
+        &self,
+        migrations: Vec<Migration>,
+    ) -> Result<Vec<AppliedMigration>, MigrationExecutionError>;
 }
 
-pub struct ScyllaMigrationRunner<'a> {
-    session: &'a Session,
+pub struct ScyllaMigrationRunner {
+    session: Arc<Session>,
     keyspace: String,
 }
 
-impl<'a> ScyllaMigrationRunner<'a> {
-    pub fn new(session: &'a Session, keyspace: &str) -> Self {
+impl<'a> ScyllaMigrationRunner {
+    pub fn new(session: Arc<Session>, keyspace: &str) -> Self {
         Self {
             session,
             keyspace: keyspace.to_string(),
@@ -70,7 +74,7 @@ impl<'a> ScyllaMigrationRunner<'a> {
         &self,
         success: bool,
         migration: &Migration,
-    ) -> Result<QueryResult, MigrationExecutionError> {
+    ) -> Result<AppliedMigration, MigrationExecutionError> {
         let query = format!(
             "INSERT INTO {keyspace}.{history_table} (version, name, checksum, applied_at, success) VALUES (?, ?, ?, ?, ?);",
             keyspace = self.keyspace,
@@ -97,6 +101,7 @@ impl<'a> ScyllaMigrationRunner<'a> {
                 ),
             )
             .await
+            .map(|_| applied_migration)
             .map_err(|err| ApplyHistoryError(err.clone()))
     }
 
@@ -153,8 +158,13 @@ impl<'a> ScyllaMigrationRunner<'a> {
 }
 
 #[async_trait]
-impl<'a> MigrationRunner for ScyllaMigrationRunner<'a> {
-    async fn run(&self, migrations: Vec<Migration>) -> Result<(), MigrationExecutionError> {
+impl<'a> MigrationRunner for ScyllaMigrationRunner {
+    async fn run(
+        &self,
+        migrations: Vec<Migration>,
+    ) -> Result<Vec<AppliedMigration>, MigrationExecutionError> {
+        let mut applied_migrations = Vec::new();
+
         self.create_history_table().await?;
         let latest_migration = self.find_latest_applied_migration().await?;
 
@@ -168,17 +178,18 @@ impl<'a> MigrationRunner for ScyllaMigrationRunner<'a> {
 
             match self.apply_migration(&migration).await {
                 Ok(_) => {
-                    self.apply_history(true, &migration).await?;
-                    println!("Applied migration {}", migration.filename)
+                    let applied_migration = self.apply_history(true, &migration).await?;
+                    applied_migrations.push(applied_migration);
+                    println!("Applied migration.rs {}", migration.filename)
                 }
                 Err(err) => {
                     self.apply_history(false, &migration).await?;
-                    println!("Failed to apply migration {}", migration.filename);
+                    println!("Failed to apply migration.rs {}", migration.filename);
                     return Err(err);
                 }
             };
         }
 
-        Ok(())
+        Ok(applied_migrations)
     }
 }

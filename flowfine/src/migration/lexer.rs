@@ -1,5 +1,5 @@
-use crate::scanner::MigrationParsingError;
-use crate::scanner::MigrationParsingError::NoSemicolonsFoundError;
+use crate::migration::MigrationParsingError;
+use crate::migration::MigrationParsingError::NoSemicolonsFoundError;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -65,26 +65,26 @@ mod tests {
     use rstest::*;
 
     #[rstest(query, expected_result,
-        case("SELECT * FROM FOO;INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');DROP TABLE;", vec![
-            "SELECT * FROM FOO;".to_string(),
-            "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
-            "DROP TABLE;".to_string(),
-        ]),
-        case("SELECT * FROM FOO;INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');DROP TABLE;", vec![
-            "SELECT * FROM FOO;".to_string(),
-            "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
-            "DROP TABLE;".to_string(),
-        ]),
-            case("  SELECT * FROM FOO;  INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');  DROP TABLE;    ", vec![
-            "SELECT * FROM FOO;".to_string(),
-            "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
-            "DROP TABLE;".to_string(),
-        ]),
-            case(" \n SELECT * FROM FOO; \n INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;'); \n DROP TABLE;  \n  ", vec![
-            "SELECT * FROM FOO;".to_string(),
-            "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
-            "DROP TABLE;".to_string(), 
-        ]),
+    case("SELECT * FROM FOO;INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');DROP TABLE;", vec![
+    "SELECT * FROM FOO;".to_string(),
+    "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
+    "DROP TABLE;".to_string(),
+    ]),
+    case("SELECT * FROM FOO;INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');DROP TABLE;", vec![
+    "SELECT * FROM FOO;".to_string(),
+    "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
+    "DROP TABLE;".to_string(),
+    ]),
+    case("  SELECT * FROM FOO;  INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');  DROP TABLE;    ", vec![
+    "SELECT * FROM FOO;".to_string(),
+    "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
+    "DROP TABLE;".to_string(),
+    ]),
+    case(" \n SELECT * FROM FOO; \n INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;'); \n DROP TABLE;  \n  ", vec![
+    "SELECT * FROM FOO;".to_string(),
+    "INSERT INTO FOO(id, text) VALUES (1, 'foo;'), (2, ';;;');".to_string(),
+    "DROP TABLE;".to_string(),
+    ]),
     )]
     fn test_delimited_queries(query: &str, expected_result: Vec<String>) {
         assert_eq!(delimit_queries("", query), Ok(expected_result));

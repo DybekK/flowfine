@@ -1,12 +1,11 @@
 use crate::config::VersionFormatting;
+use crate::migration::lexer::delimit_queries;
+use crate::migration::version::MigrationVersionKey;
+use crate::migration::FileError::*;
+use crate::migration::*;
 use std::fs::{read_dir, read_to_string, DirEntry};
 
-use crate::scanner::query::delimit_queries;
-use crate::scanner::FileError::*;
-use crate::scanner::MigrationParsingError::*;
-use crate::scanner::*;
-
-pub fn parse_migrations(
+pub fn get_migrations(
     directory_path: &str,
     version_formatting: &VersionFormatting,
 ) -> Result<MigrationResult, FileError> {
@@ -102,16 +101,16 @@ mod tests {
     use std::collections::HashSet;
 
     #[rstest(version_formatting, path, expected_result,
-        case(VersionFormatting::Numeric, "./tests/data/scanner/numeric_migrations", vec![
-            "V1__migration.cql",
-            "V1.1__migration.cql",
-            "V2.0__migration.cql", 
-        ]),
-        case(VersionFormatting::Datetime, "./tests/data/scanner/datetime_migrations", vec![
-            "V20230903141500__migration.cql",
-            "V20230903141501__migration.cql",
-            "V20230903141502__migration.cql",
-        ])
+    case(VersionFormatting::Numeric, "./tests/data/unit/numeric_migrations", vec![
+    "V1__migration.cql",
+    "V1.1__migration.cql",
+    "V2.0__migration.cql",
+    ]),
+    case(VersionFormatting::Datetime, "./tests/data/unit/datetime_migrations", vec![
+    "V20230903141500__migration.cql",
+    "V20230903141501__migration.cql",
+    "V20230903141502__migration.cql",
+    ])
     )]
     fn test_valid_migrations(
         version_formatting: VersionFormatting,
@@ -119,7 +118,7 @@ mod tests {
         expected_result: Vec<&str>,
     ) {
         // when
-        let result = parse_migrations(path, &version_formatting);
+        let result = get_migrations(path, &version_formatting);
 
         // then
         assert!(result.is_ok());
@@ -130,10 +129,10 @@ mod tests {
     fn test_invalid_migrations() {
         // given
         let version_formatting = VersionFormatting::Numeric;
-        let path = "./tests/data/scanner/invalid_migrations";
+        let path = "./tests/data/unit/invalid_migrations";
 
         // when
-        let result = parse_migrations(path, &version_formatting);
+        let result = get_migrations(path, &version_formatting);
 
         // then
         assert!(result.is_ok());
