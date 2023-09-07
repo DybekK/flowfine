@@ -1,12 +1,11 @@
+use crate::migration::version::MigrationVersionKey;
+use crate::migration::MigrationParsingError::*;
 use std::collections::BTreeMap;
-
-use crate::scanner::version::MigrationVersionKey;
-use crate::scanner::MigrationParsingError::DuplicatedMigrationError;
 use thiserror::Error;
 
+pub mod lexer;
 pub mod parser;
-mod query;
-mod version;
+pub mod version;
 
 #[derive(Debug, Error)]
 pub enum FileError {
@@ -19,23 +18,27 @@ pub enum FileError {
 
 #[derive(Debug, PartialEq, Eq, Hash, Error)]
 pub enum MigrationParsingError {
-    #[error("Duplicated migration version for file: {0}")]
+    #[error("Duplicated migration.rs version for file: {0}")]
     DuplicatedMigrationError(String),
 
-    #[error("Invalid migration format for file: {0}")]
+    #[error("Invalid migration.rs format for file: {0}")]
     InvalidMigrationFormatError(String),
 
     #[error("Invalid version format for file {0}")]
     InvalidVersionFormatError(String),
 
-    #[error("Missing migration content for file {0}")]
+    #[error("Missing migration.rs content for file {0}")]
     MissingMigrationContentError(String),
+
+    #[error("Missing semicolons in migration.rs content for file {0}")]
+    NoSemicolonsFoundError(String),
 }
 
 #[derive(Clone, Debug)]
 pub struct Migration {
     pub filename: String,
     pub version: String,
+    pub version_key: MigrationVersionKey,
     pub name: String,
     pub content: String,
     pub queries: Vec<String>,
@@ -47,17 +50,11 @@ pub struct MigrationResult {
 }
 
 impl MigrationResult {
-    pub fn print_report(self) {
-        if !self.errors.is_empty() {
-            println!("Migration Errors:");
-            for error in &self.errors {
-                println!("{:?}", error.to_string());
-            }
+    pub fn into_result(self) -> Result<Vec<Migration>, Vec<MigrationParsingError>> {
+        if self.errors.is_empty() {
+            Ok(self.migrations)
         } else {
-            println!("Migration Report:");
-            for migration in &self.migrations {
-                println!("Migration: {:?}", migration);
-            }
+            Err(self.errors)
         }
     }
 }
@@ -75,8 +72,9 @@ impl MigrationStack {
         }
     }
 
-    fn push_migration(&mut self, version_key: MigrationVersionKey, migration: Migration) {
+    fn push_migration(&mut self, migration: Migration) {
         let filename = migration.filename.clone();
+        let version_key = migration.version_key.clone();
 
         self.migrations
             .insert(version_key, migration)
