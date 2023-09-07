@@ -5,7 +5,7 @@ use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
 use scylla::frame::value::Timestamp;
 use scylla::transport::errors::QueryError;
-use scylla::{QueryResult, Session};
+use scylla::{FromRow, QueryResult, Session};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
@@ -21,10 +21,14 @@ pub enum MigrationExecutionError {
     #[error("Migration {0} failed: {1}")]
     RunMigrationError(String, QueryError),
 
+    #[error("")]
+    MigrationError(QueryError),
+
     #[error("Migration history could not be applied: {0}")]
     ApplyHistoryError(QueryError),
 }
 
+#[derive(FromRow)]
 struct AppliedMigration {
     version: String,
     name: String,
@@ -76,7 +80,7 @@ impl<'a> ScyllaMigrationRunner<'a> {
         let applied_migration = AppliedMigration {
             version: migration.version.clone(),
             name: migration.name.clone(),
-            checksum: self.calculate_checksum(&migration),
+            checksum: self.create_checksum(&migration),
             applied_at: Duration::seconds(Utc::now().timestamp()), //todo: move the code to date utils
             success,
         };
@@ -96,7 +100,27 @@ impl<'a> ScyllaMigrationRunner<'a> {
             .map_err(|err| ApplyHistoryError(err.clone()))
     }
 
-    fn calculate_checksum(&self, migration: &Migration) -> String {
+    async fn find_latest_applied_migration(
+        &self,
+    ) -> Result<Option<AppliedMigration>, MigrationExecutionError> {
+        let query = format!(
+            "SELECT version, name, checksum, applied_at, success FROM {keyspace}.{history_table} WHERE success = true LIMIT 1;",
+            keyspace = self.keyspace,
+            history_table = *HISTORY_TABLE_NAME
+        );
+
+        self.session
+            .query(query, &[])
+            .await
+            .map(|query_result| {
+                query_result
+                    .maybe_first_row_typed::<AppliedMigration>()
+                    .unwrap()
+            })
+            .map_err(|err| MigrationError(err.clone()))
+    }
+
+    fn create_checksum(&self, migration: &Migration) -> String {
         let checksum = Sha256::new()
             .chain_update(migration.version.as_bytes())
             .chain_update(migration.name.as_bytes())
@@ -109,12 +133,14 @@ impl<'a> ScyllaMigrationRunner<'a> {
     async fn create_history_table(&self) -> Result<QueryResult, MigrationExecutionError> {
         let query = format!(
             "CREATE TABLE IF NOT EXISTS {keyspace}.{history_table} (
-                version    TEXT PRIMARY KEY,
+                version    TEXT,
                 name       TEXT, 
                 checksum   TEXT,
                 applied_at TIMESTAMP,
-                success    BOOLEAN
-            );",
+                success    BOOLEAN,
+                PRIMARY KEY (success, version)
+            );
+            ",
             keyspace = self.keyspace,
             history_table = *HISTORY_TABLE_NAME
         );
@@ -130,12 +156,24 @@ impl<'a> ScyllaMigrationRunner<'a> {
 impl<'a> MigrationRunner for ScyllaMigrationRunner<'a> {
     async fn run(&self, migrations: Vec<Migration>) -> Result<(), MigrationExecutionError> {
         self.create_history_table().await?;
+        let latest_migration = self.find_latest_applied_migration().await?;
 
         for migration in migrations {
+            //todo: add property in config to verify integrity of all migrations
+            if let Some(latest_migration) = &latest_migration {
+                if latest_migration.version >= migration.version {
+                    continue;
+                }
+            }
+
             match self.apply_migration(&migration).await {
-                Ok(_) => self.apply_history(true, &migration).await?,
+                Ok(_) => {
+                    self.apply_history(true, &migration).await?;
+                    println!("Applied migration {}", migration.filename)
+                }
                 Err(err) => {
                     self.apply_history(false, &migration).await?;
+                    println!("Failed to apply migration {}", migration.filename);
                     return Err(err);
                 }
             };

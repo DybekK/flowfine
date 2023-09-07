@@ -17,7 +17,7 @@ pub fn parse_migrations(
         let entry = entry.map_err(|_err| FileNotLoadedError)?;
 
         match parse_migration(&entry, version_formatting) {
-            Ok((version_key, migration)) => migration_stack.push_migration(version_key, migration),
+            Ok(migration) => migration_stack.push_migration(migration),
             Err(err) => migration_stack.push_error(err),
         }
     }
@@ -28,7 +28,7 @@ pub fn parse_migrations(
 fn parse_migration(
     path: &DirEntry,
     version_formatting: &VersionFormatting,
-) -> Result<(MigrationVersionKey, Migration), MigrationParsingError> {
+) -> Result<Migration, MigrationParsingError> {
     let filename = parse_migration_filename(path);
     let (version, version_key) = parse_migration_version(&filename, version_formatting)?;
     let name = parse_migration_name(&filename)?;
@@ -38,12 +38,13 @@ fn parse_migration(
     let migration = Migration {
         filename,
         version,
+        version_key,
         name,
         content,
         queries,
     };
 
-    Ok((version_key, migration))
+    Ok(migration)
 }
 
 fn parse_migration_filename(path: &DirEntry) -> String {

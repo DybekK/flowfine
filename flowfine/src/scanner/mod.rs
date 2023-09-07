@@ -6,7 +6,7 @@ use thiserror::Error;
 
 pub mod parser;
 mod query;
-mod version;
+pub mod version;
 
 #[derive(Debug, Error)]
 pub enum FileError {
@@ -30,7 +30,7 @@ pub enum MigrationParsingError {
 
     #[error("Missing migration content for file {0}")]
     MissingMigrationContentError(String),
-    
+
     #[error("Missing semicolons in migration content for file {0}")]
     NoSemicolonsFoundError(String),
 }
@@ -39,6 +39,7 @@ pub enum MigrationParsingError {
 pub struct Migration {
     pub filename: String,
     pub version: String,
+    pub version_key: MigrationVersionKey,
     pub name: String,
     pub content: String,
     pub queries: Vec<String>,
@@ -72,8 +73,9 @@ impl MigrationStack {
         }
     }
 
-    fn push_migration(&mut self, version_key: MigrationVersionKey, migration: Migration) {
+    fn push_migration(&mut self, migration: Migration) {
         let filename = migration.filename.clone();
+        let version_key = migration.version_key.clone();
 
         self.migrations
             .insert(version_key, migration)
