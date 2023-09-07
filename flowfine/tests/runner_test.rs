@@ -26,7 +26,6 @@ mod tests {
         ScyllaMigrationRunner::new(session.await, KEYSPACE)
     }
 
-    #[ignore]
     #[rstest]
     #[tokio::test]
     async fn test_apply_empty_migration(#[future] runner: ScyllaMigrationRunner) {
@@ -41,7 +40,6 @@ mod tests {
         assert!(applied_migrations.is_empty());
     }
 
-    #[ignore]
     #[rstest]
     #[tokio::test]
     async fn test_apply_migrations(#[future] runner: ScyllaMigrationRunner) {
