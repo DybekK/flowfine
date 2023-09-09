@@ -157,7 +157,7 @@ impl<'a> ScyllaMigrationRunner {
                 checksum   TEXT,
                 success    BOOLEAN,
                 applied_at TIMESTAMP,
-                PRIMARY KEY ((id, version, success), applied_at)
+                PRIMARY KEY (id, applied_at)
             ) WITH CLUSTERING ORDER BY (applied_at ASC);
             ",
             keyspace = self.keyspace,
@@ -172,7 +172,7 @@ impl<'a> ScyllaMigrationRunner {
 }
 
 #[async_trait]
-impl<'a> MigrationRunner for ScyllaMigrationRunner {
+impl MigrationRunner for ScyllaMigrationRunner {
     async fn run(
         &self,
         migrations: Vec<Migration>,

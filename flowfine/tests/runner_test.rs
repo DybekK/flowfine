@@ -96,7 +96,6 @@ mod tests {
         assert_eq!(migrations.len(), applied_migrations.len());
     }
 
-    #[ignore]
     #[rstest]
     #[tokio::test]
     async fn test_ignore_already_applied_migrations(
