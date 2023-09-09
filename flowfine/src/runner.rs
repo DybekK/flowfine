@@ -3,6 +3,7 @@ use crate::runner::MigrationExecutionError::*;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use lazy_static::lazy_static;
+use nanoid::nanoid;
 use scylla::frame::value::Timestamp;
 use scylla::transport::errors::QueryError;
 use scylla::{FromRow, QueryResult, Session};
@@ -11,6 +12,7 @@ use std::sync::Arc;
 use thiserror::Error;
 
 lazy_static! {
+    static ref NANOID_LENGTH: usize = 15;
     static ref HISTORY_TABLE_NAME: String = "flowfine_history".to_string();
 }
 
@@ -31,8 +33,10 @@ pub enum MigrationExecutionError {
 
 #[derive(FromRow)]
 pub struct AppliedMigration {
+    pub id: String,
     pub version: String,
     pub name: String,
+    pub filename: String,
     pub checksum: String,
     pub applied_at: Duration,
     pub success: bool,
@@ -76,16 +80,19 @@ impl<'a> ScyllaMigrationRunner {
         migration: &Migration,
     ) -> Result<AppliedMigration, MigrationExecutionError> {
         let query = format!(
-            "INSERT INTO {keyspace}.{history_table} (version, name, checksum, applied_at, success) VALUES (?, ?, ?, ?, ?);",
+            "INSERT INTO {keyspace}.{history_table} (id, version, name, filename, checksum, applied_at, success) VALUES (?, ?, ?, ?, ?, ?, ?);",
             keyspace = self.keyspace,
             history_table = *HISTORY_TABLE_NAME
         );
 
+        let nanoid_len = *NANOID_LENGTH;
         let applied_migration = AppliedMigration {
+            id: nanoid!(nanoid_len).to_string(),
             version: migration.version.clone(),
             name: migration.name.clone(),
+            filename: migration.filename.clone(),
             checksum: self.create_checksum(&migration),
-            applied_at: Duration::seconds(Utc::now().timestamp()), //todo: move the code to date utils
+            applied_at: Duration::nanoseconds(Utc::now().timestamp_nanos()), //todo: move the code to date utils
             success,
         };
 
@@ -93,8 +100,10 @@ impl<'a> ScyllaMigrationRunner {
             .query(
                 query,
                 (
+                    &applied_migration.id,
                     &applied_migration.version,
                     &applied_migration.name,
+                    &applied_migration.filename,
                     &applied_migration.checksum,
                     Timestamp(applied_migration.applied_at),
                     &applied_migration.success,
@@ -109,7 +118,10 @@ impl<'a> ScyllaMigrationRunner {
         &self,
     ) -> Result<Option<AppliedMigration>, MigrationExecutionError> {
         let query = format!(
-            "SELECT version, name, checksum, applied_at, success FROM {keyspace}.{history_table} WHERE success = true LIMIT 1;",
+            "SELECT id, version, name, filename, checksum, applied_at, success
+                FROM {keyspace}.{history_table} 
+                WHERE success = true LIMIT 1;
+             ",
             keyspace = self.keyspace,
             history_table = *HISTORY_TABLE_NAME
         );
@@ -138,13 +150,15 @@ impl<'a> ScyllaMigrationRunner {
     async fn create_history_table(&self) -> Result<QueryResult, MigrationExecutionError> {
         let query = format!(
             "CREATE TABLE IF NOT EXISTS {keyspace}.{history_table} (
+                id         TEXT,
                 version    TEXT,
                 name       TEXT, 
+                filename   TEXT,
                 checksum   TEXT,
-                applied_at TIMESTAMP,
                 success    BOOLEAN,
-                PRIMARY KEY (success, version)
-            );
+                applied_at TIMESTAMP,
+                PRIMARY KEY (success, applied_at)
+            ) WITH CLUSTERING ORDER BY (applied_at DESC);
             ",
             keyspace = self.keyspace,
             history_table = *HISTORY_TABLE_NAME
@@ -158,7 +172,7 @@ impl<'a> ScyllaMigrationRunner {
 }
 
 #[async_trait]
-impl<'a> MigrationRunner for ScyllaMigrationRunner {
+impl MigrationRunner for ScyllaMigrationRunner {
     async fn run(
         &self,
         migrations: Vec<Migration>,
