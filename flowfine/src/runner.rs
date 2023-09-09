@@ -120,7 +120,7 @@ impl<'a> ScyllaMigrationRunner {
         let query = format!(
             "SELECT id, version, name, filename, checksum, applied_at, success
                 FROM {keyspace}.{history_table} 
-                WHERE success = true LIMIT 1 ALLOW FILTERING;
+                WHERE success = true LIMIT 1;
              ",
             keyspace = self.keyspace,
             history_table = *HISTORY_TABLE_NAME
@@ -157,8 +157,8 @@ impl<'a> ScyllaMigrationRunner {
                 checksum   TEXT,
                 success    BOOLEAN,
                 applied_at TIMESTAMP,
-                PRIMARY KEY (id, applied_at)
-            ) WITH CLUSTERING ORDER BY (applied_at ASC);
+                PRIMARY KEY (success, applied_at)
+            ) WITH CLUSTERING ORDER BY (applied_at DESC);
             ",
             keyspace = self.keyspace,
             history_table = *HISTORY_TABLE_NAME
